@@ -8,3 +8,14 @@
 ```
 Info (140120): Import completed.  370 assignments were written (out of 370 read).  0 non-global assignments were skipped because of entity name mismatch.
 ```
+
+## 定義済み変数
+
+| Variable     | Description   |
+|--------------|---------------|
+| LEDR[9:0]    | LED(Red)×10   |
+| SW[9:0]      | Switch×10     |
+| CLK1_50      | Clock(50Mhz)  |
+| CLK2_50      | Clock(50Mhz)  |
+| HEX0～5[7:0] | 7 segment LED |
+| GPIO[35:0]   | GPIO pins     |
