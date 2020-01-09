@@ -1,0 +1,9 @@
+# directory
+simulation
+incremental_db
+db
+output_files
+
+# file
+*.bak
+*.rpt
