@@ -1,37 +1,102 @@
 // main program
 module snake_game_box (
     input CLK1_50,
-	input [9:0] SW,
-    output [9:0] LEDR,
-	output [9:0] GPIO
-);
-    wire [25:0] max1 = 26'd6999999;
-    wire en1hz;
+	input [1:0] SW,
+	inout [1:0] KEY,
+	output [15:0] ARDUINO_IO,
+	output [5:0] LEDR
+);	
 
-    wire CLR1 = SW[0];
-	 
-	 reg clk = 0;
-	 reg cnt = 0;
+	/////////////////  Variable  /////////////////////
 
-	 reg [8:0] shift = 9'b000000001;
+	wire CLR = SW[0];
+
+	reg clk = 0;
+	reg SRCLK = 0;
+	reg RCLK = 0;
+	reg [6:0] cnt = 0;
 	
-    ENCOUNT en1( .max(max1), .clk(CLK1_50), .CLR(CLR1), .en(en1hz) );
+	// 進行方向 (今は上下のみ)
+	reg isUp = 0, isDown = 1;
 
-	always @(posedge CLK1_50) begin
-        if(en1hz==1) begin
-				clk <= !clk;
-				cnt <= cnt + 1;
-				if (cnt % 2 == 0)
-					shift <= shift << 1;
-		  end
+	// シフトレジスタに入力するデータのインデクス
+	reg [6:0] outIndex = 0;
 
-		  if(shift == 9'b000000000)
-			   shift <= 9'b000000001;
-    end
-	 
-	assign GPIO[0] = shift[0];
+	// 1の部分が表示される
+	// 17bit目は画面外に出たとき用
+	reg [17-1:0] ser = 17'b000001110000000;
 
-	assign GPIO[4] = !clk;
-	assign GPIO[2] = clk;
-     
-endmodule
+	//////////////////////////////////////////////////
+
+ 	// シフトレジスタに入力するクロックの周期を決める
+	// 50Mhz -> 1ms
+    wire [16-1:0] maxSr = 16'd50000;
+    wire enSr;
+    ENCOUNT en1000( .max(maxSr), .clk(CLK1_50), .clr(!CLR), .en(enSr) );
+
+	// スネークが移動する速さを決めるクロックを作る
+	// 50Mhz -> 0.1s
+	wire [24-1:0] maxSg = 24'd5000000;
+	wire enSg;
+	ENCOUNT en10( .max(maxSg), .clk(CLK1_50), .clr(!CLR), .en(enSg) );
+
+	always @( posedge CLK1_50 ) begin
+		if( enSr ) begin
+     		cnt = cnt + 1;
+  			clk = !clk;				  
+			
+			if ( cnt % 36 <= 2 ) begin
+			    RCLK = clk;
+				SRCLK <= 0;
+		  	end
+			else if ( cnt % 36 >= 2 ) begin
+			   	SRCLK = clk;
+				RCLK <= 0;
+		   	end
+		   	if ( cnt % 2 == 0 ) 
+		    	outIndex <= outIndex + 1;
+
+			if( cnt >= 38 ) begin
+				cnt <= 0;
+				outIndex <= 0;
+		   end
+		end
+
+		// 進行方向の変更
+		if( !KEY[0] && KEY[1] ) begin
+			isUp <= 1;
+			isDown <= 0;
+		end
+		else if( KEY[0] && !KEY[1]) begin
+			isUp <= 0;
+			isDown <= 1;
+		end
+		else begin
+			isUp <= isUp;
+			isDown <= isDown;
+		end
+
+		// 下方向に進む
+		if( enSg && isUp && !isDown ) begin
+				ser = ser << 1;
+				ser[0] = ser[16];
+		end
+		// 上方向に進む
+		if( enSg && isDown && !isUp ) begin
+				ser = ser >> 1;
+				ser[16] = ser[0];
+		end
+    end	 
+
+	assign ARDUINO_IO[13] = ser[outIndex % 16];
+
+ 	assign ARDUINO_IO[12] = SRCLK;
+ 	assign ARDUINO_IO[11] = RCLK;
+ 
+ 	assign ARDUINO_IO[10] = CLR;
+
+	// 確認用
+	assign LEDR[0] = isUp;
+	assign LEDR[1] = isDown;
+
+endmodule 
