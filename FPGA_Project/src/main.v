@@ -22,16 +22,17 @@ module snake_game_box (
 	// シフトレジスタに入力するデータのインデクス
 	reg [6:0] outIdx = 0;
 	reg [6:0] rowIdx = 0;
+	reg [6:0] snakePos;
+
 	// 1の部分が表示される
 	// 17bit目は画面外に出たとき用
 	reg [17-1:0] data[0:16-1];
-	reg [17-1:0] ser = 17'b00000000011000000;
+	reg [17-1:0] ser;
 	reg [17-1:0] ser_col = 17'b00000000000000001;
-	reg tmp=0;
 	
 	initial begin
 		data[0][16:0]  = 17'b00000000000000000;
-		data[1][16:0]  = 17'b00000000000000000;
+		data[1][16:0]  = 17'b00100000000000000;
 		data[2][16:0]  = 17'b00000000000000000;
 		data[3][16:0]  = 17'b00000000000000000;
 		data[4][16:0]  = 17'b00000000000000000;
@@ -47,7 +48,7 @@ module snake_game_box (
 		data[14][16:0] = 17'b00000000000000000;
 		data[15][16:0] = 17'b00000000000000000;
 
-		// ser = data[rowIdx][16:0];
+		snakePos = 6;
 	end
 
 	//////////////////////////////////////////////////
@@ -86,7 +87,6 @@ module snake_game_box (
 				ser_col = ser_col << 1;
 				if (ser_col[16] == 1)
 					ser_col[0] <= 1;
-				// ser_col[0] = ser_col[16];
 	    	end
 			if (rowIdx > 15)
 				rowIdx <= 0;
@@ -109,36 +109,17 @@ module snake_game_box (
 		end
 
 		// 下方向に進む
-		if(enSr && isUp && !isDown ) begin
-			// data[rowIdx][16:0] = data[rowIdx][16:0] << 1;
-			// data[rowIdx][0] = data[rowIdx][16];
+		if(enSg && isUp && !isDown ) begin
+			data[snakePos] = data[snakePos] >> 1;
+			data[snakePos][16] = data[snakePos][0];
 		end
 		// 上方向に進む
-		if(enSr && isDown && !isUp ) begin
-			ser = ser >> 1;
-			ser[16] = ser[0];
+		if(enSg && isDown && !isUp ) begin
+			data[snakePos] = data[snakePos] << 1;
+			data[snakePos][0] = data[snakePos][16];
 		end
 
-		// 能筋実装
-		case (rowIdx)
-			 0: ser = data[0][16:0]; 
-			 1: ser = data[1][16:0]; 
-			 2: ser = data[2][16:0]; 
-			 3: ser = data[3][16:0]; 
-			 4: ser = data[4][16:0]; 
-			 5: ser = data[5][16:0]; 
-			 6: ser = data[6][16:0]; 
-			 7: ser = data[7][16:0]; 
-			 8: ser = data[8][16:0]; 
-			 9: ser = data[9][16:0]; 
-			10: ser = data[10][16:0]; 
-			11: ser = data[11][16:0]; 
-			12: ser = data[12][16:0]; 
-			13: ser = data[13][16:0]; 
-			14: ser = data[14][16:0]; 
-			15: ser = data[15][16:0]; 
-			default: ser = ser; 
-		endcase
+		ser = data[rowIdx];
 	end
 
 	assign ARDUINO_IO[13] = CLR;
@@ -151,11 +132,5 @@ module snake_game_box (
 	// 確認用
 	assign LEDR[0] = isUp;
 	assign LEDR[1] = isDown;
-	assign LEDR[3] = tmp;
-
-	// assign LEDR[9] = SRCLK;
-	// assign LEDR[8] = RCLK;
-	// assign LEDR[6] = ser[(outIdx-1) % 16];	
-	// assign LEDR[5] = ser_col[(outIdx-1) % 16];
 
 endmodule 
